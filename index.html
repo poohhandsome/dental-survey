@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมบันทึกข้อมูลคราบสีฟัน</title>
+    <title>โปรแกรมบันทึกข้อมูลคราบสีฟัน (Offline Version)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -445,7 +445,38 @@
 
             // --- EVENT LISTENERS ---
             dentistSelect.addEventListener('change', saveCurrentFormState);
-            childSelect.addEventListener('change', saveCurrentFormState);
+            
+            childSelect.addEventListener('change', (e) => {
+                const selectedChild = e.target.value;
+                const childRecords = allRecords.filter(rec => rec.child === selectedChild);
+
+                if (childRecords.length > 0) {
+                    const latestRecord = childRecords[childRecords.length - 1];
+                    const loadedData = {
+                        dentist: latestRecord.dentist,
+                        child: selectedChild,
+                        notes: latestRecord.notes,
+                        before: {},
+                        after: {}
+                    };
+                    childRecords.forEach(rec => {
+                        loadedData.before[rec.toothNum] = rec.beforeStatus;
+                        loadedData.after[rec.toothNum] = rec.afterStatus;
+                    });
+                    currentFormData = loadedData;
+                } else {
+                    currentFormData = {
+                        dentist: dentistSelect.value,
+                        child: selectedChild,
+                        notes: '',
+                        before: {},
+                        after: {}
+                    };
+                }
+                localStorage.setItem('dentalCurrentForm', JSON.stringify(currentFormData));
+                loadPage();
+            });
+
             notesInput.addEventListener('input', saveCurrentFormState);
             saveBtn.addEventListener('click', saveRecord);
             exportRawBtn.addEventListener('click', exportRawData);
