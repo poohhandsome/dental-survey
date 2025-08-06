@@ -264,13 +264,13 @@
                 };
 
                 const upperRightDiv = document.createElement('div'); upperRightDiv.className = 'quadrant';
-                quadrants.upperRight.slice().reverse().forEach(t => upperRightDiv.appendChild(createTooth(t, prefix)));
+                quadrants.upperRight.forEach(t => upperRightDiv.appendChild(createTooth(t, prefix)));
                 
                 const upperLeftDiv = document.createElement('div'); upperLeftDiv.className = 'quadrant';
                 quadrants.upperLeft.forEach(t => upperLeftDiv.appendChild(createTooth(t, prefix)));
 
                 const lowerRightDiv = document.createElement('div'); lowerRightDiv.className = 'quadrant';
-                quadrants.lowerRight.slice().reverse().forEach(t => lowerRightDiv.appendChild(createTooth(t, prefix)));
+                quadrants.lowerRight.forEach(t => lowerRightDiv.appendChild(createTooth(t, prefix)));
 
                 const lowerLeftDiv = document.createElement('div'); lowerLeftDiv.className = 'quadrant';
                 quadrants.lowerLeft.forEach(t => lowerLeftDiv.appendChild(createTooth(t, prefix)));
