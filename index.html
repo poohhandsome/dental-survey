@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โปรแกรมบันทึกข้อมูลคราบสีฟัน (Google Sheets)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+        }
+        .tooth {
+            width: 50px;
+            height: 70px;
+            border: 2px solid #6b7280;
+            border-radius: 10px 10px 5px 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease-in-out;
+            position: relative;
+            background-color: #f3f4f6;
+        }
+        .tooth .cervical-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 30%;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .tooth.status-0 .cervical-area { background-color: transparent; }
+        .tooth.status-1 .cervical-area { background-color: #ef4444; } /* Stained - Red */
+        .tooth.status-2 .cervical-area { background-color: #22c55e; } /* Clean - Green */
+
+        .tooth-label {
+            position: absolute;
+            bottom: 5px;
+            font-size: 0.8rem;
+            color: #374151;
+        }
+        .arch-container {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            padding: 10px;
+        }
+        .quadrant {
+             display: flex;
+             gap: 5px;
+        }
+        .upper-arch .quadrant:first-child {
+            border-right: 2px dashed #9ca3af;
+            padding-right: 10px;
+        }
+        .lower-arch .quadrant:first-child {
+            border-right: 2px dashed #9ca3af;
+            padding-right: 10px;
+        }
+        /* Loading Spinner */
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            display: none; /* Hidden by default */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none; /* Hidden by default */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="loader" class="loader"></div>
+    <div id="overlay" class="overlay"></div>
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-600">โปรแกรมบันทึกข้อมูลคราบสีฟัน</h1>
+            <p class="text-lg text-gray-600 mt-2">เชื่อมต่อกับ Google Sheets</p>
+        </header>
+
+        <!-- Data Entry Form -->
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
+            <div id="alert-box" class="hidden p-4 mb-4 text-sm rounded-lg" role="alert">
+                <!-- Message will be set by JS -->
+            </div>
+
+            <form id="data-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="dentist-select" class="block mb-2 text-sm font-medium text-gray-900">ผู้บันทึกข้อมูล (ทันตแพทย์)</label>
+                    <select id="dentist-select" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                    </select>
+                </div>
+                <div>
+                    <label for="child-select" class="block mb-2 text-sm font-medium text-gray-900">รายชื่อนักเรียน</label>
+                    <select id="child-select" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                    </select>
+                </div>
+            </form>
+
+            <div class="flex justify-center items-center gap-6 my-6 p-2 bg-gray-50 rounded-md">
+                <h3 class="font-semibold">วิธีบันทึก:</h3>
+                <span class="text-sm">คลิกที่คอฟันเพื่อเปลี่ยนสถานะ</span>
+                <div class="flex items-center gap-2"><div class="w-5 h-5 bg-red-500 rounded"></div><span>ติดสี</span></div>
+                <div class="flex items-center gap-2"><div class="w-5 h-5 bg-green-500 rounded"></div><span>สะอาด</span></div>
+                 <div class="flex items-center gap-2"><div class="w-5 h-5 bg-gray-200 border rounded"></div><span>ไม่ได้บันทึก</span></div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-4">
+                <div>
+                    <h2 class="text-xl font-bold text-center mb-4 text-red-600">ก่อนการสอนแปรงฟัน</h2>
+                    <div id="teeth-container-before"></div>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-center mb-4 text-green-600">หลังการสอนแปรงฟัน</h2>
+                    <div id="teeth-container-after"></div>
+                </div>
+            </div>
+
+            <div class="mt-8">
+                 <label for="notes" class="block mb-2 text-sm font-medium text-gray-900">หมายเหตุเพิ่มเติม</label>
+                 <textarea id="notes" rows="3" class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500"></textarea>
+            </div>
+
+            <div class="mt-6 text-center">
+                <button type="button" id="save-btn" class="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-lg px-8 py-3">
+                    บันทึกข้อมูลลง Google Sheet
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- CONFIGURATION ---
+            // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE
+            const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFlrPJ4TfF6XSDwykpG-wZunRNHcB3cNFabKU4j_-nFmMdq4Z2iAT036UVFA-1VvGY/exec"; 
+
+            // --- DATA ---
+            const childrenNames = [
+                'ออโต้', 'ติวเตอร์', 'เอเต้', 'ข้าวตูร์', 'นินิว', 'วีซ่า', 'โอลิฟ', 'อัญชัน', 'มายเดียร์', 'การ์ตูน', 
+                'ปริม', 'กร', 'มาโปรด', 'เคนโด้', 'ต้นหนาว', 'สงกรานต์', 'มีดี', 'พั้นซ์ชี่', 'ไพลิน', 'พราว', 'แพร', 
+                'มะปราง', 'นัชชา', 'เบิร์ดเดย์', 'จีฟอร์ซ', 'เตวิน', 'ภีม', 'ลอตเต้', 'นาย', 'สเกล', 'ฟ้าใส', 'ยูซอน', 
+                'อลิซ', 'ต้นหลิว', 'นิวเยียร์', 'ยนิล', 'เติมเต็ม', 'เฟสบุ๊ค', 'จอมขวัญ', 'อาร์ตี้', 'เกล', 'เคท', 
+                'เปอร์โย', 'เจ้านาย', 'ลดา', 'แมมมอส', 'เหมยเหมย', 'ปอย', 'ไอซ์', 'ยี่หวา'
+            ];
+            const dentistNames = ['ทันตแพทย์ 1', 'ทันตแพทย์ 2', 'ทันตแพทย์ 3', 'ทันตแพทย์ 4', 'ทันตแพทย์ 5', 'ทันตแพทย์ 6'];
+            const anteriorTeeth = {
+                upper: { right: ['13', '12', '11'], left: ['21', '22', '23'] },
+                lower: { right: ['43', '42', '41'], left: ['31', '32', '33'] }
+            };
+
+            let currentRecordState = {};
+
+            // --- UI ELEMENTS ---
+            const dentistSelect = document.getElementById('dentist-select');
+            const childSelect = document.getElementById('child-select');
+            const beforeContainer = document.getElementById('teeth-container-before');
+            const afterContainer = document.getElementById('teeth-container-after');
+            const saveBtn = document.getElementById('save-btn');
+            const notesInput = document.getElementById('notes');
+            const alertBox = document.getElementById('alert-box');
+            const loader = document.getElementById('loader');
+            const overlay = document.getElementById('overlay');
+
+            // --- FUNCTIONS ---
+
+            const populateSelect = (selectElement, options) => {
+                options.forEach(option => {
+                    const opt = document.createElement('option');
+                    opt.value = option;
+                    opt.textContent = option;
+                    selectElement.appendChild(opt);
+                });
+            };
+
+            const createTeethUI = (container, prefix) => {
+                container.innerHTML = '';
+                const createArch = (teeth) => {
+                    const arch = document.createElement('div');
+                    arch.className = 'arch-container upper-arch mb-4';
+                    const right = document.createElement('div');
+                    right.className = 'quadrant';
+                    teeth.right.slice().reverse().forEach(toothNum => right.appendChild(createTooth(toothNum, prefix)));
+                    const left = document.createElement('div');
+                    left.className = 'quadrant';
+                    teeth.left.forEach(toothNum => left.appendChild(createTooth(toothNum, prefix)));
+                    arch.appendChild(right);
+                    arch.appendChild(left);
+                    return arch;
+                };
+                container.appendChild(createArch(anteriorTeeth.upper));
+                container.appendChild(createArch(anteriorTeeth.lower));
+            };
+            
+            const createTooth = (toothNum, prefix) => {
+                const toothDiv = document.createElement('div');
+                toothDiv.id = `${prefix}-${toothNum}`;
+                toothDiv.className = 'tooth status-0';
+                toothDiv.dataset.toothNum = toothNum;
+                toothDiv.dataset.prefix = prefix;
+
+                const cervicalArea = document.createElement('div');
+                cervicalArea.className = 'cervical-area';
+                const toothLabel = document.createElement('span');
+                toothLabel.className = 'tooth-label';
+                toothLabel.textContent = toothNum;
+
+                toothDiv.appendChild(cervicalArea);
+                toothDiv.appendChild(toothLabel);
+
+                if (!currentRecordState[prefix]) currentRecordState[prefix] = {};
+                currentRecordState[prefix][toothNum] = 0;
+
+                toothDiv.addEventListener('click', () => handleToothClick(toothDiv, toothNum, prefix));
+                return toothDiv;
+            };
+
+            const handleToothClick = (toothDiv, toothNum, prefix) => {
+                let currentState = currentRecordState[prefix][toothNum];
+                currentState = (currentState + 1) % 3;
+                currentRecordState[prefix][toothNum] = currentState;
+                toothDiv.className = `tooth status-${currentState}`;
+            };
+            
+            const resetForm = () => {
+                notesInput.value = '';
+                currentRecordState = {};
+                createTeethUI(beforeContainer, 'before');
+                createTeethUI(afterContainer, 'after');
+                childSelect.selectedIndex = 0;
+            };
+
+            const showAlert = (message, isSuccess) => {
+                alertBox.textContent = message;
+                alertBox.className = `p-4 mb-4 text-sm rounded-lg ${isSuccess ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`;
+                alertBox.classList.remove('hidden');
+                setTimeout(() => alertBox.classList.add('hidden'), 5000);
+            };
+
+            const toggleLoading = (isLoading) => {
+                loader.style.display = isLoading ? 'block' : 'none';
+                overlay.style.display = isLoading ? 'block' : 'none';
+                saveBtn.disabled = isLoading;
+            };
+
+            const saveRecord = () => {
+                if (!SCRIPT_URL) {
+                    showAlert("ข้อผิดพลาด: กรุณาใส่ URL ของ Google Apps Script ในโค้ดก่อน", false);
+                    return;
+                }
+
+                const dentist = dentistSelect.value;
+                const child = childSelect.value;
+                const notes = notesInput.value;
+                const recordDate = new Date().toLocaleString('th-TH');
+                
+                const allToothNumbers = [
+                    ...anteriorTeeth.upper.right, ...anteriorTeeth.upper.left, 
+                    ...anteriorTeeth.lower.right, ...anteriorTeeth.lower.left
+                ];
+
+                const recordsToSend = [];
+                let hasData = false;
+                
+                allToothNumbers.forEach(toothNum => {
+                    const beforeStatus = currentRecordState.before[toothNum] || 0;
+                    const afterStatus = currentRecordState.after[toothNum] || 0;
+
+                    if (beforeStatus !== 0 || afterStatus !== 0) {
+                        hasData = true;
+                        recordsToSend.push({
+                            dentist,
+                            child,
+                            toothNum,
+                            beforeStatus,
+                            afterStatus,
+                            date: recordDate,
+                            notes
+                        });
+                    }
+                });
+
+                if (!hasData) {
+                    showAlert("กรุณาบันทึกข้อมูลคราบสีฟันอย่างน้อย 1 ซี่", false);
+                    return;
+                }
+                
+                toggleLoading(true);
+
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    cache: 'no-cache',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(recordsToSend)
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.result === "success") {
+                        showAlert("บันทึกข้อมูลลง Google Sheet สำเร็จ!", true);
+                        resetForm();
+                    } else {
+                        throw new Error(data.message || 'เกิดข้อผิดพลาดในการบันทึก');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert(`เกิดข้อผิดพลาด: ${error.message}`, false);
+                })
+                .finally(() => {
+                    toggleLoading(false);
+                });
+            };
+
+            // --- INITIALIZATION ---
+            populateSelect(dentistSelect, dentistNames);
+            populateSelect(childSelect, childrenNames);
+            resetForm(); 
+
+            // --- EVENT LISTENERS ---
+            saveBtn.addEventListener('click', saveRecord);
+        });
+    </script>
+</body>
+</html>
