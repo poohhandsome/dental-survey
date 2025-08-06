@@ -79,9 +79,9 @@
                 <div>
                     <label class="block mb-2 text-sm font-medium text-gray-900">รายชื่อนักเรียน</label>
                     <div class="flex items-center gap-2">
-                        <div id="selected-child-display" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 truncate">
-                            -- กรุณาเลือกนักเรียน --
-                        </div>
+                        <select id="child-select" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                             <option value="">-- กรุณาเพิ่มนักเรียน --</option>
+                        </select>
                         <button type="button" id="select-child-btn" class="p-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
@@ -173,7 +173,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- DATA ---
-            const childrenNames = [
+            const masterChildrenList = [
                 'ออโต้', 'ติวเตอร์', 'เอเต้', 'ข้าวตูร์', 'นินิว', 'วีซ่า', 'โอลิฟ', 'อัญชัน', 'มายเดียร์', 'การ์ตูน', 'ปริม', 'กร', 'มาโปรด',
                 'เคนโด้', 'ต้นหนาว', 'สงกรานต์', 'มีดี', 'พั้นซ์ชี่', 'ไพลิน', 'พราว', 'แพร', 'มะปราง', 'นัชชา', 'เบิร์ดเดย์',
                 'จีฟอร์ซ', 'เตวิน', 'ภีม', 'ลอตเต้', 'นาย', 'สเกล', 'ฟ้าใส', 'ยูซอน', 'อลิซ', 'ต้นหลิว', 'นิวเยียร์', 'ยนิล', 'เติมเต็ม',
@@ -185,7 +185,7 @@
 
             // --- UI ELEMENTS ---
             const dentistSelect = document.getElementById('dentist-select');
-            const selectedChildDisplay = document.getElementById('selected-child-display');
+            const childSelect = document.getElementById('child-select');
             const selectChildBtn = document.getElementById('select-child-btn');
             const childModal = document.getElementById('child-modal');
             const closeModalBtn = document.getElementById('close-modal-btn');
@@ -208,6 +208,7 @@
             };
 
             const populateSelect = (selectElement, options) => {
+                selectElement.innerHTML = ''; // Clear existing options
                 options.forEach(option => {
                     const opt = document.createElement('option');
                     opt.value = option;
@@ -219,10 +220,12 @@
             // --- LOCAL STORAGE & DATA HANDLING ---
             let allRecords = JSON.parse(localStorage.getItem('dentalAllRecords')) || [];
             let currentFormData = JSON.parse(localStorage.getItem('dentalCurrentForm')) || {};
+            let selectedChildrenList = JSON.parse(localStorage.getItem('dentalSelectedChildren')) || [];
 
             const saveCurrentFormState = () => {
                 currentFormData.dentist = dentistSelect.value;
                 currentFormData.notes = notesInput.value;
+                currentFormData.child = childSelect.value;
                 localStorage.setItem('dentalCurrentForm', JSON.stringify(currentFormData));
             };
 
@@ -331,12 +334,12 @@
             };
 
             const saveRecord = () => {
-                if (!currentFormData.child) {
-                    showAlert("กรุณาเลือกนักเรียนก่อนบันทึก");
+                const child = childSelect.value;
+                if (!child) {
+                    showAlert("กรุณาเพิ่มและเลือกนักเรียนก่อนบันทึก");
                     return;
                 }
                 const dentist = dentistSelect.value;
-                const child = currentFormData.child;
                 const notes = notesInput.value;
                 const recordDate = new Date().toLocaleDateString('th-TH');
 
@@ -392,38 +395,29 @@
                 downloadCSV(csvRows.join('\n'), 'dental_plaque_summary.csv');
             };
 
-            const handleChildSelection = (selectedChild) => {
-                currentFormData.child = selectedChild;
-                const childRecords = allRecords.filter(rec => rec.child === selectedChild);
-
-                if (childRecords.length > 0) {
-                    const latestRecord = childRecords[childRecords.length - 1];
-                    currentFormData.dentist = latestRecord.dentist;
-                    currentFormData.notes = latestRecord.notes;
-                    currentFormData.before = {};
-                    currentFormData.after = {};
-                    childRecords.forEach(rec => {
-                        currentFormData.before[rec.toothNum] = rec.beforeStatus;
-                        currentFormData.after[rec.toothNum] = rec.afterStatus;
-                    });
-                } else {
-                    currentFormData.notes = '';
-                    currentFormData.before = {};
-                    currentFormData.after = {};
+            const handleChildSelectionFromModal = (selectedChild) => {
+                if (!selectedChildrenList.includes(selectedChild)) {
+                    selectedChildrenList.push(selectedChild);
+                    localStorage.setItem('dentalSelectedChildren', JSON.stringify(selectedChildrenList));
+                    
+                    const opt = document.createElement('option');
+                    opt.value = selectedChild;
+                    opt.textContent = selectedChild;
+                    childSelect.appendChild(opt);
                 }
-                localStorage.setItem('dentalCurrentForm', JSON.stringify(currentFormData));
+                childSelect.value = selectedChild;
+                childSelect.dispatchEvent(new Event('change'));
                 childModal.classList.add('hidden');
-                loadPage();
             };
 
             const populateChildModal = () => {
                 childListContainer.innerHTML = '';
-                childrenNames.forEach(name => {
+                masterChildrenList.forEach(name => {
                     const nameBtn = document.createElement('button');
                     nameBtn.type = 'button';
                     nameBtn.textContent = name;
                     nameBtn.className = 'w-full text-left p-2 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500';
-                    nameBtn.addEventListener('click', () => handleChildSelection(name));
+                    nameBtn.addEventListener('click', () => handleChildSelectionFromModal(name));
                     childListContainer.appendChild(nameBtn);
                 });
             };
@@ -433,8 +427,17 @@
                 populateSelect(dentistSelect, dentistNames);
                 populateChildModal();
                 
+                // Populate child dropdown from the saved list
+                childSelect.innerHTML = '<option value="">-- กรุณาเพิ่มนักเรียน --</option>';
+                selectedChildrenList.forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    childSelect.appendChild(opt);
+                });
+
                 dentistSelect.value = currentFormData.dentist || dentistNames[0];
-                selectedChildDisplay.textContent = currentFormData.child || '-- กรุณาเลือกนักเรียน --';
+                childSelect.value = currentFormData.child || '';
                 notesInput.value = currentFormData.notes || '';
 
                 createTeethUI(beforeContainer, 'before');
@@ -447,6 +450,44 @@
 
             // --- EVENT LISTENERS ---
             dentistSelect.addEventListener('change', saveCurrentFormState);
+            
+            childSelect.addEventListener('change', (e) => {
+                const selectedChild = e.target.value;
+                if (!selectedChild) {
+                    currentFormData = {};
+                    localStorage.removeItem('dentalCurrentForm');
+                    loadPage();
+                    return;
+                }
+
+                const childRecords = allRecords.filter(rec => rec.child === selectedChild);
+
+                if (childRecords.length > 0) {
+                    const latestRecord = childRecords[childRecords.length - 1];
+                    currentFormData = {
+                        dentist: latestRecord.dentist,
+                        child: selectedChild,
+                        notes: latestRecord.notes,
+                        before: {},
+                        after: {}
+                    };
+                    childRecords.forEach(rec => {
+                        currentFormData.before[rec.toothNum] = rec.beforeStatus;
+                        currentFormData.after[rec.toothNum] = rec.afterStatus;
+                    });
+                } else {
+                    currentFormData = {
+                        dentist: dentistSelect.value,
+                        child: selectedChild,
+                        notes: '',
+                        before: {},
+                        after: {}
+                    };
+                }
+                localStorage.setItem('dentalCurrentForm', JSON.stringify(currentFormData));
+                loadPage();
+            });
+
             notesInput.addEventListener('input', saveCurrentFormState);
             saveBtn.addEventListener('click', saveRecord);
             exportRawBtn.addEventListener('click', exportRawData);
