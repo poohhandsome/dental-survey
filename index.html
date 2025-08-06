@@ -34,7 +34,6 @@
             border-top-right-radius: 8px;
             transition: background-color 0.2s ease-in-out;
         }
-        /* New Logic: 0 = Clean (default), 1 = Stained (clicked) */
         .tooth.status-0 .cervical-area { background-color: transparent; } /* Clean */
         .tooth.status-1 .cervical-area { background-color: #ef4444; } /* Stained */
 
@@ -78,8 +77,17 @@
                     <select id="dentist-select" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"></select>
                 </div>
                 <div>
-                    <label for="child-select" class="block mb-2 text-sm font-medium text-gray-900">รายชื่อนักเรียน</label>
-                    <select id="child-select" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"></select>
+                    <label class="block mb-2 text-sm font-medium text-gray-900">รายชื่อนักเรียน</label>
+                    <div class="flex items-center gap-2">
+                        <div id="selected-child-display" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 truncate">
+                            -- กรุณาเลือกนักเรียน --
+                        </div>
+                        <button type="button" id="select-child-btn" class="p-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </form>
 
@@ -127,39 +135,37 @@
                 </div>
             </div>
             
-            <!-- Raw Data Table -->
             <h3 class="text-xl font-semibold mt-6 mb-2">ตารางข้อมูลดิบ (Raw Data)</h3>
             <div class="overflow-x-auto max-h-96">
                 <table class="min-w-full text-sm text-left text-gray-500">
                     <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
-                        <tr>
-                            <th scope="col" class="px-6 py-3">ทันตแพทย์</th>
-                            <th scope="col" class="px-6 py-3">ชื่อนักเรียน</th>
-                            <th scope="col" class="px-6 py-3">ซี่ฟัน (FDI)</th>
-                            <th scope="col" class="px-6 py-3">สถานะ (ก่อน)</th>
-                            <th scope="col" class="px-6 py-3">สถานะ (หลัง)</th>
-                            <th scope="col" class="px-6 py-3">วันที่บันทึก</th>
-                            <th scope="col" class="px-6 py-3">หมายเหตุ</th>
-                        </tr>
+                        <tr><th scope="col" class="px-6 py-3">ทันตแพทย์</th><th scope="col" class="px-6 py-3">ชื่อนักเรียน</th><th scope="col" class="px-6 py-3">ซี่ฟัน (FDI)</th><th scope="col" class="px-6 py-3">สถานะ (ก่อน)</th><th scope="col" class="px-6 py-3">สถานะ (หลัง)</th><th scope="col" class="px-6 py-3">วันที่บันทึก</th><th scope="col" class="px-6 py-3">หมายเหตุ</th></tr>
                     </thead>
                     <tbody id="data-table-body"></tbody>
                 </table>
             </div>
 
-            <!-- Summary Table -->
              <h3 class="text-xl font-semibold mt-8 mb-2">ตารางสรุปเปอร์เซ็นต์คราบพลัค (Plaque % Summary)</h3>
             <div class="overflow-x-auto max-h-96">
                 <table class="min-w-full text-sm text-left text-gray-500">
                     <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
-                        <tr>
-                            <th scope="col" class="px-6 py-3">ชื่อนักเรียน</th>
-                            <th scope="col" class="px-6 py-3">Plaque % (ก่อน)</th>
-                            <th scope="col" class="px-6 py-3">Plaque % (หลัง)</th>
-                            <th scope="col" class="px-6 py-3">ผู้บันทึกล่าสุด</th>
-                        </tr>
+                        <tr><th scope="col" class="px-6 py-3">ชื่อนักเรียน</th><th scope="col" class="px-6 py-3">Plaque % (ก่อน)</th><th scope="col" class="px-6 py-3">Plaque % (หลัง)</th><th scope="col" class="px-6 py-3">ผู้บันทึกล่าสุด</th></tr>
                     </thead>
                     <tbody id="summary-table-body"></tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Child Selection Modal -->
+    <div id="child-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold">เลือกรายชื่อนักเรียน</h3>
+                <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl font-bold">&times;</button>
+            </div>
+            <div id="child-list-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-[70vh] overflow-y-auto">
+                <!-- Child names will be populated here by JS -->
             </div>
         </div>
     </div>
@@ -179,7 +185,11 @@
 
             // --- UI ELEMENTS ---
             const dentistSelect = document.getElementById('dentist-select');
-            const childSelect = document.getElementById('child-select');
+            const selectedChildDisplay = document.getElementById('selected-child-display');
+            const selectChildBtn = document.getElementById('select-child-btn');
+            const childModal = document.getElementById('child-modal');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const childListContainer = document.getElementById('child-list-container');
             const beforeContainer = document.getElementById('teeth-container-before');
             const afterContainer = document.getElementById('teeth-container-after');
             const saveBtn = document.getElementById('save-btn');
@@ -191,7 +201,6 @@
             const alertBox = document.getElementById('alert-box');
 
             // --- LOCAL FUNCTIONS ---
-
             const showAlert = (message) => {
                 alertBox.textContent = message;
                 alertBox.classList.remove('hidden');
@@ -208,13 +217,11 @@
             };
 
             // --- LOCAL STORAGE & DATA HANDLING ---
-
             let allRecords = JSON.parse(localStorage.getItem('dentalAllRecords')) || [];
             let currentFormData = JSON.parse(localStorage.getItem('dentalCurrentForm')) || {};
 
             const saveCurrentFormState = () => {
                 currentFormData.dentist = dentistSelect.value;
-                currentFormData.child = childSelect.value;
                 currentFormData.notes = notesInput.value;
                 localStorage.setItem('dentalCurrentForm', JSON.stringify(currentFormData));
             };
@@ -233,20 +240,18 @@
                 toothDiv.appendChild(cervicalArea);
                 toothDiv.appendChild(toothLabel);
 
-                // Initialize state for the form object
                 if (!currentFormData[prefix]) currentFormData[prefix] = {};
-                currentFormData[prefix][toothNum] = currentFormData[prefix][toothNum] || 0; // 0 = Clean (default)
+                currentFormData[prefix][toothNum] = currentFormData[prefix][toothNum] || 0;
                 toothDiv.classList.add(`status-${currentFormData[prefix][toothNum]}`);
 
                 toothDiv.addEventListener('click', () => {
                     let currentState = currentFormData[prefix][toothNum];
-                    // Toggle between 0 (Clean) and 1 (Stained)
                     currentState = 1 - currentState; 
                     currentFormData[prefix][toothNum] = currentState;
                     
                     toothDiv.classList.remove('status-0', 'status-1');
                     toothDiv.classList.add(`status-${currentState}`);
-                    saveCurrentFormState(); // Save on every click
+                    saveCurrentFormState();
                 });
                 return toothDiv;
             };
@@ -285,27 +290,16 @@
             };
 
             const renderTables = () => {
-                // Render Raw Data Table
                 rawTableBody.innerHTML = '';
                 const statusMap = { 0: '<span class="text-green-600 font-semibold">สะอาด</span>', 1: '<span class="text-red-600 font-semibold">ติดสี</span>' };
                 allRecords.forEach(record => {
                     const row = document.createElement('tr');
                     row.className = 'bg-white border-b hover:bg-gray-50';
-                    row.innerHTML = `
-                        <td class="px-6 py-4">${record.dentist}</td>
-                        <td class="px-6 py-4">${record.child}</td>
-                        <td class="px-6 py-4">${record.toothNum}</td>
-                        <td class="px-6 py-4">${statusMap[record.beforeStatus]}</td>
-                        <td class="px-6 py-4">${statusMap[record.afterStatus]}</td>
-                        <td class="px-6 py-4">${record.date}</td>
-                        <td class="px-6 py-4">${record.notes}</td>
-                    `;
+                    row.innerHTML = `<td class="px-6 py-4">${record.dentist}</td><td class="px-6 py-4">${record.child}</td><td class="px-6 py-4">${record.toothNum}</td><td class="px-6 py-4">${statusMap[record.beforeStatus]}</td><td class="px-6 py-4">${statusMap[record.afterStatus]}</td><td class="px-6 py-4">${record.date}</td><td class="px-6 py-4">${record.notes}</td>`;
                     rawTableBody.appendChild(row);
                 });
 
-                // Calculate and Render Summary Table
                 const summaryData = {};
-                // Group records by child to process them together
                 const recordsByChild = allRecords.reduce((acc, rec) => {
                     acc[rec.child] = acc[rec.child] || [];
                     acc[rec.child].push(rec);
@@ -314,20 +308,10 @@
 
                 Object.keys(recordsByChild).forEach(childName => {
                     const childRecords = recordsByChild[childName];
-                    const latestRecord = childRecords[childRecords.length - 1]; // Get latest dentist/date info
-                    
-                    summaryData[childName] = {
-                        dentist: latestRecord.dentist,
-                        beforeStained: 0,
-                        afterStained: 0,
-                    };
-
-                    // We only want to count the latest entry for each tooth
+                    const latestRecord = childRecords[childRecords.length - 1];
+                    summaryData[childName] = { dentist: latestRecord.dentist, beforeStained: 0, afterStained: 0 };
                     const latestToothRecords = {};
-                    childRecords.forEach(rec => {
-                        latestToothRecords[rec.toothNum] = rec;
-                    });
-
+                    childRecords.forEach(rec => { latestToothRecords[rec.toothNum] = rec; });
                     Object.values(latestToothRecords).forEach(rec => {
                          if (rec.beforeStatus === 1) summaryData[childName].beforeStained++;
                          if (rec.afterStatus === 1) summaryData[childName].afterStained++;
@@ -341,23 +325,21 @@
                     const afterPercent = ((data.afterStained / totalSurfaces) * 100).toFixed(2);
                     const row = document.createElement('tr');
                     row.className = 'bg-white border-b hover:bg-gray-50';
-                    row.innerHTML = `
-                        <td class="px-6 py-4 font-medium text-gray-900">${childName}</td>
-                        <td class="px-6 py-4">${beforePercent}%</td>
-                        <td class="px-6 py-4">${afterPercent}%</td>
-                        <td class="px-6 py-4">${data.dentist}</td>
-                    `;
+                    row.innerHTML = `<td class="px-6 py-4 font-medium text-gray-900">${childName}</td><td class="px-6 py-4">${beforePercent}%</td><td class="px-6 py-4">${afterPercent}%</td><td class="px-6 py-4">${data.dentist}</td>`;
                     summaryTableBody.appendChild(row);
                 });
             };
 
             const saveRecord = () => {
+                if (!currentFormData.child) {
+                    showAlert("กรุณาเลือกนักเรียนก่อนบันทึก");
+                    return;
+                }
                 const dentist = dentistSelect.value;
-                const child = childSelect.value;
+                const child = currentFormData.child;
                 const notes = notesInput.value;
                 const recordDate = new Date().toLocaleDateString('th-TH');
 
-                // Remove any previous records for this specific child to avoid duplicates
                 allRecords = allRecords.filter(rec => rec.child !== child);
 
                 anteriorTeethList.forEach(toothNum => {
@@ -367,11 +349,11 @@
                 });
 
                 localStorage.setItem('dentalAllRecords', JSON.stringify(allRecords));
-                localStorage.removeItem('dentalCurrentForm'); // Clear form state for next entry
-                currentFormData = {}; // Reset in-memory object
+                localStorage.removeItem('dentalCurrentForm');
+                currentFormData = {};
                 
                 showAlert("บันทึกข้อมูลสำหรับ '" + child + "' สำเร็จ!");
-                loadPage(); // Reload the whole page state
+                loadPage();
             };
             
             const downloadCSV = (csvContent, fileName) => {
@@ -387,19 +369,12 @@
             };
 
             const exportRawData = () => {
-                if (allRecords.length === 0) {
-                    showAlert('ไม่มีข้อมูลดิบให้ export');
-                    return;
-                }
+                if (allRecords.length === 0) { showAlert('ไม่มีข้อมูลดิบให้ export'); return; }
                 const statusMap = { 0: 'Clean', 1: 'Stained' };
                 const headers = ['Dentist', 'Child Name', 'Tooth Number (FDI)', 'Status Before', 'Status After', 'Record Date', 'Notes'];
                 const csvRows = [headers.join(',')];
                 allRecords.forEach(rec => {
-                    const values = [
-                        `"${rec.dentist}"`, `"${rec.child}"`, `"${rec.toothNum}"`,
-                        `"${statusMap[rec.beforeStatus]}"`, `"${statusMap[rec.afterStatus]}"`,
-                        `"${rec.date}"`, `"${rec.notes.replace(/"/g, '""')}"`
-                    ];
+                    const values = [`"${rec.dentist}"`, `"${rec.child}"`, `"${rec.toothNum}"`, `"${statusMap[rec.beforeStatus]}"`, `"${statusMap[rec.afterStatus]}"`, `"${rec.date}"`, `"${rec.notes.replace(/"/g, '""')}"`];
                     csvRows.push(values.join(','));
                 });
                 downloadCSV(csvRows.join('\n'), 'dental_raw_data.csv');
@@ -407,10 +382,7 @@
 
             const exportSummaryData = () => {
                 const summaryRows = Array.from(summaryTableBody.querySelectorAll('tr'));
-                if (summaryRows.length === 0) {
-                    showAlert('ไม่มีข้อมูลสรุปให้ export');
-                    return;
-                }
+                if (summaryRows.length === 0) { showAlert('ไม่มีข้อมูลสรุปให้ export'); return; }
                 const headers = ['Child Name', 'Plaque % Before', 'Plaque % After', 'Last Recorded By'];
                 const csvRows = [headers.join(',')];
                 summaryRows.forEach(row => {
@@ -420,24 +392,54 @@
                 downloadCSV(csvRows.join('\n'), 'dental_plaque_summary.csv');
             };
 
+            const handleChildSelection = (selectedChild) => {
+                currentFormData.child = selectedChild;
+                const childRecords = allRecords.filter(rec => rec.child === selectedChild);
+
+                if (childRecords.length > 0) {
+                    const latestRecord = childRecords[childRecords.length - 1];
+                    currentFormData.dentist = latestRecord.dentist;
+                    currentFormData.notes = latestRecord.notes;
+                    currentFormData.before = {};
+                    currentFormData.after = {};
+                    childRecords.forEach(rec => {
+                        currentFormData.before[rec.toothNum] = rec.beforeStatus;
+                        currentFormData.after[rec.toothNum] = rec.afterStatus;
+                    });
+                } else {
+                    currentFormData.notes = '';
+                    currentFormData.before = {};
+                    currentFormData.after = {};
+                }
+                localStorage.setItem('dentalCurrentForm', JSON.stringify(currentFormData));
+                childModal.classList.add('hidden');
+                loadPage();
+            };
+
+            const populateChildModal = () => {
+                childListContainer.innerHTML = '';
+                childrenNames.forEach(name => {
+                    const nameBtn = document.createElement('button');
+                    nameBtn.type = 'button';
+                    nameBtn.textContent = name;
+                    nameBtn.className = 'w-full text-left p-2 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500';
+                    nameBtn.addEventListener('click', () => handleChildSelection(name));
+                    childListContainer.appendChild(nameBtn);
+                });
+            };
+
             // --- PAGE INITIALIZATION ---
             const loadPage = () => {
-                // Populate dropdowns
-                dentistSelect.innerHTML = '';
-                childSelect.innerHTML = '';
                 populateSelect(dentistSelect, dentistNames);
-                populateSelect(childSelect, childrenNames);
-
-                // Restore form state from localStorage if it exists
+                populateChildModal();
+                
                 dentistSelect.value = currentFormData.dentist || dentistNames[0];
-                childSelect.value = currentFormData.child || childrenNames[0];
+                selectedChildDisplay.textContent = currentFormData.child || '-- กรุณาเลือกนักเรียน --';
                 notesInput.value = currentFormData.notes || '';
 
-                // Create teeth UI
                 createTeethUI(beforeContainer, 'before');
                 createTeethUI(afterContainer, 'after');
                 
-                // Render tables with all saved data
                 renderTables();
             };
 
@@ -445,42 +447,17 @@
 
             // --- EVENT LISTENERS ---
             dentistSelect.addEventListener('change', saveCurrentFormState);
-            
-            childSelect.addEventListener('change', (e) => {
-                const selectedChild = e.target.value;
-                const childRecords = allRecords.filter(rec => rec.child === selectedChild);
-
-                if (childRecords.length > 0) {
-                    const latestRecord = childRecords[childRecords.length - 1];
-                    const loadedData = {
-                        dentist: latestRecord.dentist,
-                        child: selectedChild,
-                        notes: latestRecord.notes,
-                        before: {},
-                        after: {}
-                    };
-                    childRecords.forEach(rec => {
-                        loadedData.before[rec.toothNum] = rec.beforeStatus;
-                        loadedData.after[rec.toothNum] = rec.afterStatus;
-                    });
-                    currentFormData = loadedData;
-                } else {
-                    currentFormData = {
-                        dentist: dentistSelect.value,
-                        child: selectedChild,
-                        notes: '',
-                        before: {},
-                        after: {}
-                    };
-                }
-                localStorage.setItem('dentalCurrentForm', JSON.stringify(currentFormData));
-                loadPage();
-            });
-
             notesInput.addEventListener('input', saveCurrentFormState);
             saveBtn.addEventListener('click', saveRecord);
             exportRawBtn.addEventListener('click', exportRawData);
             exportSummaryBtn.addEventListener('click', exportSummaryData);
+            selectChildBtn.addEventListener('click', () => childModal.classList.remove('hidden'));
+            closeModalBtn.addEventListener('click', () => childModal.classList.add('hidden'));
+            childModal.addEventListener('click', (e) => {
+                if (e.target.id === 'child-modal') {
+                    childModal.classList.add('hidden');
+                }
+            });
         });
     </script>
 </body>
