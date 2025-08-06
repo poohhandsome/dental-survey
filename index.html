@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมบันทึกข้อมูลคราบสีฟัน (Offline Version)</title>
+    <title>โปรแกรมบันทึกข้อมูลคราบสีฟัน</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -34,9 +34,9 @@
             border-top-right-radius: 8px;
             transition: background-color 0.2s ease-in-out;
         }
-        .tooth.status-0 .cervical-area { background-color: transparent; }
-        .tooth.status-1 .cervical-area { background-color: #ef4444; } /* Stained - Red */
-        .tooth.status-2 .cervical-area { background-color: #22c55e; } /* Clean - Green */
+        /* New Logic: 0 = Clean (default), 1 = Stained (clicked) */
+        .tooth.status-0 .cervical-area { background-color: transparent; } /* Clean */
+        .tooth.status-1 .cervical-area { background-color: #ef4444; } /* Stained */
 
         .tooth-label {
             position: absolute;
@@ -85,10 +85,9 @@
 
             <div class="flex justify-center items-center gap-6 my-6 p-2 bg-gray-50 rounded-md">
                 <h3 class="font-semibold">วิธีบันทึก:</h3>
-                <span class="text-sm">คลิกที่คอฟันเพื่อเปลี่ยนสถานะ</span>
-                <div class="flex items-center gap-2"><div class="w-5 h-5 bg-red-500 rounded"></div><span>ติดสี</span></div>
-                <div class="flex items-center gap-2"><div class="w-5 h-5 bg-green-500 rounded"></div><span>สะอาด</span></div>
-                <div class="flex items-center gap-2"><div class="w-5 h-5 bg-gray-200 border rounded"></div><span>ไม่ได้บันทึก</span></div>
+                <span class="text-sm">คลิกเฉพาะซี่ที่ติดสี (ค่าเริ่มต้นคือสะอาด)</span>
+                <div class="flex items-center gap-2"><div class="w-5 h-5 bg-red-500 rounded"></div><span>ติดสี (Stained)</span></div>
+                <div class="flex items-center gap-2"><div class="w-5 h-5 bg-gray-200 border rounded"></div><span>สะอาด (Clean)</span></div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-4">
@@ -236,15 +235,16 @@
 
                 // Initialize state for the form object
                 if (!currentFormData[prefix]) currentFormData[prefix] = {};
-                currentFormData[prefix][toothNum] = currentFormData[prefix][toothNum] || 0;
+                currentFormData[prefix][toothNum] = currentFormData[prefix][toothNum] || 0; // 0 = Clean (default)
                 toothDiv.classList.add(`status-${currentFormData[prefix][toothNum]}`);
 
                 toothDiv.addEventListener('click', () => {
                     let currentState = currentFormData[prefix][toothNum];
-                    currentState = (currentState + 1) % 3; // Cycle through 0, 1, 2
+                    // Toggle between 0 (Clean) and 1 (Stained)
+                    currentState = 1 - currentState; 
                     currentFormData[prefix][toothNum] = currentState;
                     
-                    toothDiv.classList.remove('status-0', 'status-1', 'status-2');
+                    toothDiv.classList.remove('status-0', 'status-1');
                     toothDiv.classList.add(`status-${currentState}`);
                     saveCurrentFormState(); // Save on every click
                 });
@@ -287,10 +287,10 @@
             const renderTables = () => {
                 // Render Raw Data Table
                 rawTableBody.innerHTML = '';
+                const statusMap = { 0: '<span class="text-green-600 font-semibold">สะอาด</span>', 1: '<span class="text-red-600 font-semibold">ติดสี</span>' };
                 allRecords.forEach(record => {
                     const row = document.createElement('tr');
                     row.className = 'bg-white border-b hover:bg-gray-50';
-                    const statusMap = { 0: 'ไม่ได้บันทึก', 1: '<span class="text-red-600 font-semibold">ติดสี</span>', 2: '<span class="text-green-600 font-semibold">สะอาด</span>' };
                     row.innerHTML = `
                         <td class="px-6 py-4">${record.dentist}</td>
                         <td class="px-6 py-4">${record.child}</td>
@@ -305,21 +305,35 @@
 
                 // Calculate and Render Summary Table
                 const summaryData = {};
-                allRecords.forEach(rec => {
-                    if (!summaryData[rec.child]) {
-                        summaryData[rec.child] = {
-                            dentist: rec.dentist,
-                            beforeStained: 0,
-                            afterStained: 0,
-                            count: 0
-                        };
-                    }
-                    summaryData[rec.child].dentist = rec.dentist; // Keep the latest dentist
-                    if (rec.beforeStatus === 1) summaryData[rec.child].beforeStained++;
-                    if (rec.afterStatus === 1) summaryData[rec.child].afterStained++;
-                    summaryData[rec.child].count++;
-                });
+                // Group records by child to process them together
+                const recordsByChild = allRecords.reduce((acc, rec) => {
+                    acc[rec.child] = acc[rec.child] || [];
+                    acc[rec.child].push(rec);
+                    return acc;
+                }, {});
 
+                Object.keys(recordsByChild).forEach(childName => {
+                    const childRecords = recordsByChild[childName];
+                    const latestRecord = childRecords[childRecords.length - 1]; // Get latest dentist/date info
+                    
+                    summaryData[childName] = {
+                        dentist: latestRecord.dentist,
+                        beforeStained: 0,
+                        afterStained: 0,
+                    };
+
+                    // We only want to count the latest entry for each tooth
+                    const latestToothRecords = {};
+                    childRecords.forEach(rec => {
+                        latestToothRecords[rec.toothNum] = rec;
+                    });
+
+                    Object.values(latestToothRecords).forEach(rec => {
+                         if (rec.beforeStatus === 1) summaryData[childName].beforeStained++;
+                         if (rec.afterStatus === 1) summaryData[childName].afterStained++;
+                    });
+                });
+                
                 summaryTableBody.innerHTML = '';
                 Object.keys(summaryData).sort().forEach(childName => {
                     const data = summaryData[childName];
@@ -343,27 +357,20 @@
                 const notes = notesInput.value;
                 const recordDate = new Date().toLocaleDateString('th-TH');
 
-                let hasData = false;
+                // Remove any previous records for this specific child to avoid duplicates
+                allRecords = allRecords.filter(rec => rec.child !== child);
+
                 anteriorTeethList.forEach(toothNum => {
                     const beforeStatus = currentFormData.before[toothNum] || 0;
                     const afterStatus = currentFormData.after[toothNum] || 0;
-
-                    if (beforeStatus !== 0 || afterStatus !== 0) {
-                        hasData = true;
-                        allRecords.push({ dentist, child, toothNum, beforeStatus, afterStatus, date: recordDate, notes });
-                    }
+                    allRecords.push({ dentist, child, toothNum, beforeStatus, afterStatus, date: recordDate, notes });
                 });
-
-                if (!hasData) {
-                    showAlert("กรุณาบันทึกข้อมูลคราบสีฟันอย่างน้อย 1 ซี่");
-                    return;
-                }
 
                 localStorage.setItem('dentalAllRecords', JSON.stringify(allRecords));
                 localStorage.removeItem('dentalCurrentForm'); // Clear form state for next entry
                 currentFormData = {}; // Reset in-memory object
                 
-                showAlert("บันทึกข้อมูลสำเร็จ!");
+                showAlert("บันทึกข้อมูลสำหรับ '" + child + "' สำเร็จ!");
                 loadPage(); // Reload the whole page state
             };
             
@@ -384,7 +391,7 @@
                     showAlert('ไม่มีข้อมูลดิบให้ export');
                     return;
                 }
-                const statusMap = { 0: 'Not Recorded', 1: 'Stained', 2: 'Clean' };
+                const statusMap = { 0: 'Clean', 1: 'Stained' };
                 const headers = ['Dentist', 'Child Name', 'Tooth Number (FDI)', 'Status Before', 'Status After', 'Record Date', 'Notes'];
                 const csvRows = [headers.join(',')];
                 allRecords.forEach(rec => {
